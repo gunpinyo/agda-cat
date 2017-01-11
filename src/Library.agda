@@ -3,7 +3,7 @@
 module Library where
 
 open import Data.Product
-  using    ( Σ-syntax )
+  using    ( Σ ; Σ-syntax ; _×_ )
   public
 
 open import Function
@@ -24,9 +24,19 @@ open import Relation.Binary.Core
   using    ( Rel )
   public
 
+open import Relation.Unary
+  using    ( Pred )
+  public
+
 open import Relation.Binary.PropositionalEquality
-  using    ( _≡_ )
+  using    ( _≡_ ; module ≡-Reasoning )
   renaming ( refl  to ≡-refl
            ; sym   to ≡-sym
-           ; trans to ≡-trans )
+           ; trans to ≡-trans)
+  public
+
+open ≡-Reasoning
+  using    ( _≡⟨_⟩_ )
+  renaming ( begin_ to ≡-proof_
+           ; _∎     to _≡-qed )
   public

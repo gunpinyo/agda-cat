@@ -6,126 +6,109 @@ open import Library
 --------------------------------------------------------------------------------
 
 record CatLevel : Set where
-  open Library
-
   field
-    Obj-ℓ  : Level
-    Hom-ℓ  : Level
+    Obj  : Level
+    Hom  : Level
 
-  Prop-ℓ : Level
-  Prop-ℓ = ℓ-max Obj-ℓ Hom-ℓ
+  Obj-Hom : Level
+  Obj-Hom = ℓ-max Obj Hom
 
-  Self-ℓ : Level
-  Self-ℓ = ℓ-suc (ℓ-max Obj-ℓ Hom-ℓ)
+  Cat : Level
+  Cat = ℓ-suc (ℓ-max Obj Hom)
 
 --------------------------------------------------------------------------------
--- Definition of Category
+-- Definition of a Category
 --------------------------------------------------------------------------------
 
-record Category (Cat-ℓ : CatLevel) : Set (CatLevel.Self-ℓ Cat-ℓ) where
-  open CatLevel Cat-ℓ
+module _ (ℓ : CatLevel) (let module ℓ = CatLevel ℓ) where
+  record Category : Set ℓ.Cat where
+    field
+      Obj   : Set ℓ.Obj
+      _⇒_   : Obj → Obj → Set ℓ.Hom
+      id    : (X : Obj) → X ⇒ X
+      _∘_   : ∀{X Y Z} → Y ⇒ Z → X ⇒ Y → X ⇒ Z
 
-  field
-    Obj   : Set Obj-ℓ
-    _⇒_   : Rel Obj Hom-ℓ
-    id    : (X : Obj) → X ⇒ X
-    _∘_   : ∀{X Y Z} → Y ⇒ Z → X ⇒ Y → X ⇒ Z
+    infix 4 _⇒_
+    infix 6 _∘_
 
-  infix 4 _⇒_
-  infix 6 _∘_
-
-  field
-    idl   : ∀{X Y}{f : X ⇒ Y} → (id Y) ∘ f ≡ f
-    idr   : ∀{X Y}{f : X ⇒ Y} → f ∘ (id X) ≡ f
-    assoc : ∀{W X Y Z}{f : W ⇒ X}{g : X ⇒ Y}{h : Y ⇒ Z}
-              → (h ∘ g) ∘ f ≡ h ∘ (g ∘ f)
+    field
+      idl   : ∀{X Y}{f : X ⇒ Y} → (id Y) ∘ f ≡ f
+      idr   : ∀{X Y}{f : X ⇒ Y} → f ∘ (id X) ≡ f
+      assoc : ∀{W X Y Z}{f : W ⇒ X}{g : X ⇒ Y}{h : Y ⇒ Z}
+                → (h ∘ g) ∘ f ≡ h ∘ (g ∘ f)
 
 --------------------------------------------------------------------------------
 -- Dual Category
 --------------------------------------------------------------------------------
 
-  op : Category Cat-ℓ
-  op = record { Obj    = Obj
-              ; _⇒_    = λ-flip _⇒_
-              ; id     = id
-              ; _∘_    = λ-flip _∘_
-              ; idl    = idr
-              ; idr    = idl
-              ; assoc  = ≡-sym assoc }
+    op : Category
+    op = record { Obj    = Obj
+                ; _⇒_    = λ-flip _⇒_
+                ; id     = id
+                ; _∘_    = λ-flip _∘_
+                ; idl    = idr
+                ; idr    = idl
+                ; assoc  = ≡-sym assoc }
 
 --------------------------------------------------------------------------------
 -- Properties of Spacial Morphisms
 --------------------------------------------------------------------------------
 
-  record _≅_ (X Y : Obj) : Set Self-ℓ where
-    field
-      f   : X ⇒ Y
-      g   : Y ⇒ X
-      g∘f : g ∘ f ≡ id X
-      f∘g : f ∘ g ≡ id Y
+    record _≅_ (X Y : Obj) : Set ℓ.Cat where
+      field
+        f   : X ⇒ Y
+        g   : Y ⇒ X
+        g∘f : g ∘ f ≡ id X
+        f∘g : f ∘ g ≡ id Y
 
-  record isIsomorphism {X Y : Obj} (f : X ⇒ Y) : Set Self-ℓ where
-    field
-      X≅Y  : X ≅ Y
-      cond : _≅_.f X≅Y ≡ f
+    record _≾_ (X Y : Obj) : Set ℓ.Cat where
+      field
+        s   : X ⇒ Y
+        r   : Y ⇒ X
+        r∘s : r ∘ s ≡ id X
 
-  record isSection {X Y : Obj} (s : X ⇒ Y) : Set Self-ℓ where
-    field
-      r   : Y ⇒ X
-      r∘s : r ∘ s ≡ id X
+    module _ {X Y : Obj} (f : X ⇒ Y) where
+      is-isomorphism  : Set ℓ.Hom
+      is-isomorphism  = Σ[ g ∈ Y ⇒ X ] (g ∘ f ≡ id X) × (f ∘ g ≡ id Y)
 
-  record isRetraction {X Y : Obj} (r : Y ⇒ X) : Set Self-ℓ where
-    field
-      s   : X ⇒ Y
-      r∘s : r ∘ s ≡ id X
+      is-section      : Set ℓ.Hom
+      is-section      = Σ[ g ∈ Y ⇒ X ] g ∘ f ≡ id X
 
-  isMonic : {X Y : Obj} → X ⇒ Y → Set Prop-ℓ
-  isMonic {Y} {Z} f = ∀{X}{g h : X ⇒ Y} → f ∘ g ≡ f ∘ h → g ≡ h
+      is-retraction   : Set ℓ.Hom
+      is-retraction   = Σ[ g ∈ Y ⇒ X ] f ∘ g ≡ id Y
 
-  isEpic : {X Y : Obj} → X ⇒ Y → Set Prop-ℓ
-  isEpic {X} {Y} f = ∀{Z}{g h : Y ⇒ Z} → g ∘ f ≡ h ∘ f → g ≡ h
+      is-monomorphism : Set ℓ.Obj-Hom
+      is-monomorphism = ∀{Z}{g h : Z ⇒ X} → f ∘ g ≡ f ∘ h → g ≡ h
 
-  record isBimorphism {X Y : Obj} (f : X ⇒ Y) : Set Prop-ℓ where
-    field
-      monic : isMonic f
-      epic  : isEpic f
+      is-epimorphism  : Set ℓ.Obj-Hom
+      is-epimorphism  = ∀{Z}{g h : Y ⇒ Z} → g ∘ f ≡ h ∘ f → g ≡ h
 
---------------------------------------------------------------------------------
--- Definition of Functor
---------------------------------------------------------------------------------
+      is-bimorphism   : Set ℓ.Obj-Hom
+      is-bimorphism   = is-monomorphism × is-epimorphism
 
-record Functor {C-ℓ D-ℓ : CatLevel} (C : Category C-ℓ) (D : Category D-ℓ)
-    : Set (ℓ-max (CatLevel.Self-ℓ C-ℓ) (CatLevel.Self-ℓ D-ℓ)) where
-  open module C = Category C using () renaming (_⇒_ to _⇒ᶜ_ ; _∘_ to _∘ᶜ_)
-  open module D = Category D using () renaming (_⇒_ to _⇒ᵈ_ ; _∘_ to _∘ᵈ_)
+    module _ (X Y : Obj) where
+      _iso⇒_  : Set ℓ.Hom
+      _iso⇒_  = Σ (X ⇒ Y) is-isomorphism
 
-  field
-    map  : C.Obj → D.Obj
-    fmap : ∀{X Y} → X ⇒ᶜ Y → (map X) ⇒ᵈ (map Y)
+      _mono⇒_ : Set ℓ.Obj-Hom
+      _mono⇒_ = Σ (X ⇒ Y) is-monomorphism
 
-  field
-    id   : ∀{X} → fmap (C.id X) ≡ D.id (map X)
-    comp : ∀{X Y Z}{f : X ⇒ᶜ Y}{g : Y ⇒ᶜ Z}
-             → fmap (g ∘ᶜ f) ≡ (fmap g) ∘ᵈ (fmap f)
+      _epi⇒_  : Set ℓ.Obj-Hom
+      _epi⇒_  = Σ (X ⇒ Y) is-epimorphism
 
 --------------------------------------------------------------------------------
--- Definition of Natural Transformation
+-- Category of Sets i.e. Types that has no non-trival equality
 --------------------------------------------------------------------------------
 
-record NaturalTrans {C-ℓ D-ℓ : CatLevel}
-    {C : Category C-ℓ} {D : Category D-ℓ} (F : Functor C D)  (G : Functor C D)
-    : Set (ℓ-max (CatLevel.Self-ℓ C-ℓ) (CatLevel.Self-ℓ D-ℓ)) where
-  open module C = Category C using ()    renaming (_⇒_ to _⇒ᶜ_)
-  open module D = Category D using (_∘_) renaming (_⇒_ to _⇒ᵈ_)
-  module F = Functor F
-  module G = Functor G
+SetCat : (ℓ : Level) → Category (record { Obj = ℓ-suc ℓ ; Hom = ℓ })
+SetCat ℓ = record
+  { Obj   = Object
+  ; _⇒_   = λ (X Y : Object) → (X → Y)
+  ; id    = λ (X : Object) → (λ x → x)
+  ; _∘_   = λ {X Y Z : Object} (g : Y → Z) (f : X → Y) → (λ x → g (f x))
+  ; idl   = ≡-refl
+  ; idr   = ≡-refl
+  ; assoc = ≡-refl
+  } where Object = Set ℓ
 
-  field
-    map  : (X : C.Obj) → (F.map X) ⇒ᵈ (G.map X)
-    comm : ∀{X Y}{f : X ⇒ᶜ Y} → (G.fmap f) ∘ (map X) ≡ (map Y) ∘ (F.fmap f)
-
---------------------------------------------------------------------------------
--- Definition of Natrual Isomorphism
---------------------------------------------------------------------------------
-
--- record NaturalIso
+SetCat₀ = SetCat ℓ-zero
